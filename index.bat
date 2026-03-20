@@ -14,6 +14,7 @@ set FILE_SIZE=%~2
 set CONTENT_PATH=%~3
 set FILE_EXT=%~x3
 set MY_DEVICE=%MY_ADB_DEVICE%
+set bat_notification_utility="D:/projects/windows-automation-scripts/bat-notification-utility/index.bat"
 
 :: Initial Debug Output
 if "%DEBUG_MODE%"=="0" goto :SkipDebugOutput
@@ -84,11 +85,4 @@ if "%DEBUG_MODE%"=="1" echo [SUCCESS] File size is acceptable. & echo.
 if "%DEBUG_MODE%"=="1" echo [STEP 3] Pushing file to %MY_DEVICE%... & pause
 
 :: Push the file silently (unless adb throws its own error)
-adb -s %MY_DEVICE% push "%CONTENT_PATH%" "/storage/emulated/0/Download/Quick Share"
-
-:: Evaluate final result
-if %errorlevel% equ 0 (
-    if "%DEBUG_MODE%"=="1" echo. & echo [SUCCESS] File transferred to phone! & pause
-) else (
-    if "%DEBUG_MODE%"=="1" echo. & echo [ERROR] ADB transfer failed. Check your cable connection. & pause
-)
+adb -s %MY_DEVICE% push "%CONTENT_PATH%" "/storage/emulated/0/Download/Quick Share" 2> %TEMP%\adb_err.tmp & type %TEMP%\adb_err.tmp & findstr /C:"adb: error:" %TEMP%\adb_err.tmp > nul & if not errorlevel 1 ( (for /f "tokens=1,2* delims=:" %%A in (%TEMP%\adb_err.tmp) do @call %bat_notification_utility% error "ADB transfer failed" "%%C") > nul 2>&1 & del %TEMP%\adb_err.tmp) else ( (for %%F in ("%CONTENT_PATH%") do @call %bat_notification_utility% success "ADB transfer successful" "%%~nxF") > nul 2>&1 & del %TEMP%\adb_err.tmp & (if "%DEBUG_MODE%"=="1" pause & exit))
